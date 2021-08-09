@@ -1,0 +1,54 @@
+# 시작하기
+
+## Express
+
+### 설정
+
+[package.json](./01_lets_start/package.json) 확인
+
+### 테스트용 데이터 모킹
+
+[app.model.ts](./01_lets_start/src/app.model.ts) 확인
+
+### Middle-ware
+
+여러 라우터 중간에 개입돼서, Gateway 역할을 수행.  
+(스프링의 Interceptor 라고 보면 되겠네요.)
+
+```ts
+app.use((req: Request, res: Response, next: NextFunction) => {
+  console.log('this is som middleware');
+  next();
+})
+```
+
+`next()` 해당 구문을 실행 후, 라우터로 이동을 하도록 함.
+
+### Error Response
+
+```ts
+app.get('/cats', (req: Request, res: Response) => {
+  try {
+    throw new Error('Occurred Error!')
+  } catch (e) {
+    res.status(500).send({
+      success: false,
+      error: e.message
+    })
+  }
+})
+```
+
+### Dynamic Routing
+
+```ts
+app.get('/cats/:id', (req: express.Request, res: express.Response) => {
+  const params = req.params
+
+  res.status(200).send({
+    success: true,
+    data: Cat.find(cat => cat.id === params.id)
+  })
+})
+```
+
