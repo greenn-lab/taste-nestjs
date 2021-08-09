@@ -1,45 +1,24 @@
-import * as express from 'express';
-import {Cat} from './app.model';
+import {default as express, Express, NextFunction, Request, Response} from 'express';
 
-const app: express.Express = express();
+import catsRoute from './cats/cats.route'
 
-app.use((req, res, next) => {
+const app: Express = express()
+
+
+//* logging middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
   console.log(req.rawHeaders[1]);
   console.log('this is logging middleware');
   next();
 });
 
-app.get('/cats/som', (req, res, next: express.NextFunction) => {
-  console.log('this is som middleware');
-  next();
-});
+//* json middleware
+app.use(express.json());
 
-app.get('/', (req: express.Request, res: express.Response) => {
-  res.send({cats: Cat});
-});
+app.use(catsRoute);
 
-app.get('/cats/:id', (req: express.Request, res: express.Response) => {
-  const params = req.params;
-
-  res.status(200).send({
-    success: true,
-    data: Cat.find(cat => cat.id === params.id)
-  })
-});
-
-app.get('/cats/blue', (req, res, next: express.NextFunction) => {
-  res.send({blue: Cat[0]});
-});
-
-app.get('/cats/som', (req, res) => {
-  res.send({som: Cat[1]});
-});
-
+//* 404 middleware
 app.use((req, res, next) => {
   console.log('this is error middleware');
   res.send({error: '404 not found error'});
-});
-
-app.listen(8000, () => {
-  console.log('server is on...');
 });

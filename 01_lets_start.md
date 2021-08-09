@@ -52,3 +52,29 @@ app.get('/cats/:id', (req: express.Request, res: express.Response) => {
 })
 ```
 
+## 디렉토리 구조
+### Router 분리
+
+```ts 
+// cats.route.ts
+import {Router} from 'express'
+
+const router = Router()
+
+router.get('/cats', (req, res) => {
+  // ... implements
+})
+```
+라우터를 분리해서 생성하고
+
+```ts
+// app.ts
+import catsRoute from './cats/cats.route'
+
+// omitted ...
+
+app.use(catsRoute)
+```
+`app.ts` 에서 모두 취합하는 형태로.
+
+
