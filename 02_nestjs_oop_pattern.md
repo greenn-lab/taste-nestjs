@@ -119,15 +119,15 @@ export class AppModule {}
 기본적인 디렉토리 구조는 다음과 같아요.
 ```
 src
-+-- cats
-|   +-- dto
-|   |   +-- create-cat.dto.ts
-|   +-- interfaces
-|   |   +-- cat.interface.ts
-|   +-- cats.controller.ts
-|   +-- cats.service.ts
-+-- app.modules.ts
-+-- main.ts
+├─ cats
+│  ├─ dto
+│  │  └─ create-cat.dto.ts
+│  ├─ interfaces
+│  │  └─ cat.interface.ts
+│  ├─ cats.controller.ts
+│  └─ cats.service.ts
+├─ app.modules.ts
+└─ main.ts
 ```
 
 ## Middleware
