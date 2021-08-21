@@ -194,3 +194,37 @@ export class LoggerMiddleware implements NestMiddleware {
 }
 ```
 이렇게 응답 이후 처리 내용을 `.on('finish', () => {})` 이런 이벤트 등록을 해서 후처리 할 수 있군요.
+
+
+## Exception Filters & Pipes
+
+`http://localhost:3000/cats/xxx` 정의되지 않은 URL 로 접근하면 다름처럼 404 에러 응답이 나오는게 기본. 
+```json
+{
+  "statusCode": 404,
+  "message": "Cannot GET /cats/xxx",
+  "error": "Not Found"
+}
+```
+
+기본 적으로 오류는 `HttpException` 객체를 활용 하면
+```ts
+class CatsController {
+  @Get()
+  getAllCat() {
+    throw new HttpException('error message', 401)
+    return '...'
+  }
+
+  // ...
+}
+```
+결과는 
+```json
+{
+  "statusCode": 401,
+  "message": "error message"
+}
+```
+이렇답니다.
+
