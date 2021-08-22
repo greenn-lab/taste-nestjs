@@ -226,5 +226,156 @@ class CatsController {
   "message": "error message"
 }
 ```
-이렇답니다.
+이렇답니다. 이렇게도 가능하죠.
 
+```ts
+class CatsController {
+  @Get()
+  getAllCat() {
+    throw new HttpException({status: 401, message: 'error message'}, 401)
+    return '...'
+  }
+
+  // ...
+}
+```
+오류를 객체를 던질 수도 있는거죠.  
+좀 더 우아한 방법은 Filter 를 사용하는 건데,
+
+```ts
+import {ArgumentsHost, Catch, ExceptionFilter, HttpException} from "@nestjs/common";
+import {Request, Response} from "express";
+
+@Catch(HttpException)
+export class HttpExceptionFilter implements ExceptionFilter {
+  catch(exception: HttpException, host: ArgumentsHost) {
+    const context = host.switchToHttp()
+    const request = context.getRequest<Request>()
+    const response = context.getResponse<Response>()
+
+    response
+    .status(exception.getStatus())
+    .json({
+      success: false,
+      timestamp: new Date().toISOString(),
+      error: exception.getResponse()
+    })
+  }
+}
+```
+이렇게 Filter 를 만들고, 명시적으로
+
+```ts
+import {Get, UseFilters} from "@nestjs/common";
+import {HttpExceptionFilter} from "./http-exception.filter";
+
+@UseFilters(HttpExceptionFilter)
+export class CatController {
+
+  @Get()
+  //@UseFilters(HttpExceptionFilter)
+  getAllCats() {
+    return "hi, cats"
+  }
+  
+  // ...
+}
+```
+위 처럼 지정 할 수 있어요. Controller class, Method 범위로 각각 지정할 수 있어요. 전역으로 선언하려면
+
+```ts
+// main.ts
+import {NestFactory} from "@nestjs/core"
+import {AppModule} from "./app.module"
+import {HttpExceptionFilter} from "./http-exception.filter"
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule)
+  app.useGlobalFilters(new HttpExceptionFilter())
+  // ...
+}
+```
+이렇게 지정할 수 있네요.
+
+## pipe pattern
+[https://docs.microsoft.com/en-us/azure/architecture/patterns/pipes-and-filters](https://docs.microsoft.com/en-us/azure/architecture/patterns/pipes-and-filters)
+이런 패턴이 있네요. 이건 Servlet Filter 가 쓰는 패턴인데, 이름은 pipe pattern 이라고... ~~왠지 이름 먼저 지어버려서 MS가 정의한 패턴이 되어버린것 같은~~  
+아무튼, 연속되는 로직들의 연결 같은 거라고 볼 수 있고, 함수형 프로그래밍 같은 느낌이기도 하고요.
+
+```ts
+import { Injectable, PipeTransform, HttpException } from '@nestjs/common'
+
+@Injectable()
+export class PositiveIntPipe implements PipeTransform {
+  transform(value: number) {
+    if (value < 0) {
+      throw new HttpException('value > 0', 400);
+    }
+    return value;
+  }
+}
+```
+양의 정수가 아니면 예외처리가 되는 거에요. Pipe 는 Validation Check 로 사용되는게 일반적인 것 같아요.
+
+```ts
+import {Get, UsePipes} from "@nestjs/common";
+import {PositiveIntPipe} from "./positiveInt.pipe";
+
+// @UsePipes(PositiveIntPipe)
+export class CatsController {
+  @Get(':id')
+  getOneCat(@Param('id', ParseIntPipe, PositiveIntPipe) param: number) {
+    return 'get one cat api';
+  }
+  
+  // ...
+}
+```
+class 에 `@UsePipes(PositiveIntPipe)` 와 같이 쓸 수도 있고 `@Param('id', ParseIntPipe, PositiveIntPipe)`
+메서드 파라미터에 넣을 수 도 있어요.
+
+## Interceptors & AOP pattern
+기본적으로 Request Life-cycle 은 다음과 같아요.  
+[https://docs.nestjs.com/faq/request-lifecycle#summary](https://docs.nestjs.com/faq/request-lifecycle#summary)
+Middleware, Filter, Pipe 그리고 Interceptor 까지. 비슷한 개념들이 중첩되는 것 같아서
+이럴 때 Life-cycle 을 확인 해서, 각각의 역할들을 이해하는게 좋겠어요.  
+
+AOP 는 뭔지 아시죠? 관점지향 프로그래밍 (Aspect Orient Programming~~철자 맞나??~~). 아무튼 특정 로직의 수행에는 관심이 없고, 그것들의
+실행 지점에서 무언가 덧붙여 프로그래밍하는 그런 식이겠네요. Interceptor 는 그런 거란거죠.
+
+```ts
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common'
+import { Observable } from 'rxjs'
+import { map } from 'rxjs/operators'
+
+@Injectable()
+export class SuccessInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    return next.handle().pipe(
+      map((data) => ({
+        success: true,
+        data,
+      })),
+    );
+  }
+}
+```
+Return type 이 `Observable<any>` 이네요. ~~Reactive Programming 도 공부해야 하는데...~~
+아무튼, 이렇게 Interceptor 만들고 사용은 다른거랑 비슷해요.
+
+```ts
+import {UseInterceptors} from "@nestjs/common"
+import {SuccessInterceptor} from "./success.interceptor";
+
+@UseInterceptors(SuccessInterceptor)
+export class CatsController {
+  // ...
+}
+```
+
+전역적으로 설정하려면,
+```ts
+// main.ts
+const app = await NestFactory.create(AppModule);
+app.useGlobalInterceptors(new LoggingInterceptor());
+```

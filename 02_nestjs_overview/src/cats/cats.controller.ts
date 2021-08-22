@@ -8,7 +8,7 @@ import {
   Post,
   Put,
   UseFilters,
-  UseInterceptors,
+  UseInterceptors, UsePipes,
 } from '@nestjs/common';
 import {HttpExceptionFilter} from 'src/common/exceptions/http-exception.filter';
 import {SuccessInterceptor} from 'src/common/interceptors/success.interceptor';
