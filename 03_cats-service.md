@@ -197,3 +197,34 @@ export class CatService {
 }
 ```
 이런 아름다운 결과가 나와요.
+
+## API (swagger)
+swagger 로 API 문서화를 하는 거에요.
+```shell
+npm i @nestjs/swagger swagger-ui-express
+```
+해준 다음에
+
+```ts
+// main.ts
+import { NestFactory } from '@nestjs/core'
+import { AppModule } from './app.module'
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule)
+  // ...
+  
+  const config = new DocumentBuilder()
+    .setTitle('Cats Service')
+    .setDescription('kitten meow')
+    .setVersion('0.0.1')
+    .build()
+  
+  const document: OpenAPIObject = SwaggerModule.createDocument(app, config)
+  SwaggerModule.setup('api-docs', app, document)
+  
+  // ...
+}
+```
+
+이렇게 히면 `/api-docs` URL 로 API 문서를 확인 할 수 있어요.
