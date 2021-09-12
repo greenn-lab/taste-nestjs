@@ -1,0 +1,9 @@
+POST {{host}}/cats/login
+Content-Type: application/json
+
+{
+  "email": "rc2@ca.ts",
+  "password": "-----"
+}
+
+###
