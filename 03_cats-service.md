@@ -448,3 +448,123 @@ https://jwt.io/ 에서 토큰을 디버깅 하면
 ![](.images/1fcc6c1a.png)
 
 이렇게 된답니다!
+
+
+### Passport 인증 전략과 Custom Decorator
+컨트롤러의 End-point 에 JWT 인증을 연결 해요.
+```ts
+// cats.controller.ts
+export class CatsController {
+  // ...
+
+  @ApiOperation({ summary: '고양이 한 놈 가져오기' })
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  getCurrentCat(@CurrentUser() cat) {
+    return cat.readOnlyData
+  }
+
+  // ...
+}
+```
+`@UseGuards(JwtAuthGuard)` 를 걸어주는 건데요. Guard 가 뭔지 싶으면 Life-Cycle 을 다시한번 확인해 봐요.  
+여기서 `@CurrentUser` 라는 Custom Decorator 를 썼는데요. 별거  아녜요.
+```ts
+// user.decorator.ts
+import { createParamDecorator, ExecutionContext } from '@nestjs/common'
+
+export const CurrentUser = createParamDecorator(
+  (data: unknown, context: ExecutionContext) => {
+    const request = context.switchToHttp().getRequest()
+    return request.user
+  }
+)
+```
+`createPramDecorator(...)` 를 정의해서 쓰면 되는 거네요.
+
+이제는 인증이 요청되는 부분의 코드인데요.  
+```ts
+// jwt.strategy.ts
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  // ...
+
+  async validate(payload: Payload) {
+    const cat = await this.repository.findCatByIdWithoutPassword(payload.subject)
+
+    if (!cat) {
+      throw new UnauthorizedException()
+    }
+
+    return cat
+  }
+}
+```
+이렇게 인증을 확인해요. JWT 토큰 검증은 내부적으로 알아서 처리 되더라고요.
+> ### 여기서 잠깐!  
+> 제가 삽질한 부분이 있어서요. `.env` 환경 설정이 적용되질 않아서 애 먹었는데요.
+> 강의에선 설명을 대충 넘어가서 몰랐거든요. `auth.module.ts` 파일에서 `@Module(...)` decorator 중에
+> `ConfigModule.forRoot()` 이걸 import 속성에 추가 해줘야만 해요.  
+> app.module.ts 에서 적용되면 전체적으로 모두 적용되는 줄 알았는데, 아니더라고요.  
+> ~~은근히 스프링이 편한 것 같은 건, 저만의 느낌일까요??~~
+
+암튼 이렇게 하고,
+```http request
+POST {{host}}/cats/login
+Content-Type: application/json
+
+{
+  "email": "rc2@ca.ts",
+  "password": "-----"
+}
+```
+이렇게 로그인해서
+```
+POST http://localhost:8000/cats/login
+
+HTTP/1.1 201 Created
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 240
+ETag: W/"f0-+Hgj3pDNG3xbR9r6my9HhmwIHf8"
+Date: Sun, 19 Sep 2021 14:26:50 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InJjMkBjYS50cyIsInN1YmplY3QiOiI2MTJhNGYwMGU1MjBjMzk2OGM4NzllNTEiLCJpYXQiOjE2MzIwNjE2MTAsImV4cCI6MTY2MzYxOTIxMH0.MFDL4yLXCURoALXhCe-SMiKGD0qHEj-PyQD2vlehkF0"
+  }
+}
+```
+나온 결과 토큰을 넣어서 요청을 해야만 `401 Unauthorized` 를 맞지 않아요.
+```http request
+GET {{host}}/cats
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InJjMkBjYS50cyIsInN1YmplY3QiOiI2MTJhNGYwMGU1MjBjMzk2OGM4NzllNTEiLCJpYXQiOjE2MzIwNjE2MTAsImV4cCI6MTY2MzYxOTIxMH0.MFDL4yLXCURoALXhCe-SMiKGD0qHEj-PyQD2vlehkF0
+```
+
+이러면 정상적으로
+```
+GET http://localhost:8000/cats
+
+HTTP/1.1 200 OK
+X-Powered-By: Express
+Content-Type: application/json; charset=utf-8
+Content-Length: 95
+ETag: W/"5f-KH366SZ+Y1jVWapFPbMFddH0/Js"
+Date: Sun, 19 Sep 2021 14:27:19 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "success": true,
+  "data": {
+    "id": "612a4f00e520c3968c879e51",
+    "email": "rc2@ca.ts",
+    "name": "road-cat"
+  }
+}
+
+Response code: 200 (OK); Time: 6908ms; Content length: 95 bytes
+```
+이런 응답을 받을 수 있답니다.
