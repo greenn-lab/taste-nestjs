@@ -568,3 +568,11 @@ Keep-Alive: timeout=5
 Response code: 200 (OK); Time: 6908ms; Content length: 95 bytes
 ```
 이런 응답을 받을 수 있답니다.
+
+
+### Swagger
+npm 에서 `express-basic-auth` 모듈을 추가하고 아아디 비번 정해서 쓰면 된대요.
+
+### multer
+파일을 처리할 때는, `multipart/form-data` 를 지원하는 `multer` 를 쓰면 된대요.
+
